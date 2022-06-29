@@ -487,6 +487,15 @@ if SERVER then
 		if ply:KeyDown(IN_ATTACK2) then
 			local col = tr.Entity:GetControllerCol(index - 1)
 			if col then
+			    local function report( thing )
+			        error( "Tried to inject a command into p2m!: " .. tostring( thing ) )
+                end
+
+			    if string.find( tostring(col.r or ""), ";" ) then report( col.r ) end
+			    if string.find( tostring(col.g or ""), ";" ) then report( col.g ) end
+			    if string.find( tostring(col.b or ""), ";" ) then report( col.b ) end
+			    if string.find( tostring(col.a or ""), ";" ) then report( col.a ) end
+
 				ply:ConCommand("colmat_r " .. col.r)
 				ply:ConCommand("colmat_g " .. col.g)
 				ply:ConCommand("colmat_b " .. col.b)
