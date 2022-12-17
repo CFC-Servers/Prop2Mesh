@@ -18,6 +18,7 @@ local empty = { Mesh = Mesh(), Material = Material("models/debug/debugwhite") }
 empty.Mesh:BuildFromTriangles({{pos = Vector()},{pos = Vector()},{pos = Vector()}})
 
 
+
 --[[
 
 ]]
@@ -174,8 +175,16 @@ end)
 --[[
 
 ]]
-local cvar = CreateClientConVar("prop2mesh_render_disable", 0, true, false)
-local draw_disable = cvar:GetBool()
+-- Are we allowed to ignore and not send net messages
+local allow_disabled = GetConVar("prop2mesh_disable_allowed")
+local wants_disabled = GetConVar("prop2mesh_disable")
+local function netDisabled()
+	return allow_disable:GetBool() and wants_disable:GetBool()
+end
+
+-- Do we want to disable rendering of meshes
+local draw_disable = CreateClientConVar("prop2mesh_render_disable", 0, true, false)
+draw_disable = draw_disable:GetBool()
 
 cvars.AddChangeCallback("prop2mesh_render_disable", function(cvar, old, new)
     draw_disable = tobool(new)
@@ -379,12 +388,15 @@ end
 function ENT:Think()
 	if not self.prop2mesh_sync then
 		SyncOwner(self)
-		refreshAll(self, self.prop2mesh_controllers)
 
-		net.Start("prop2mesh_sync")
-		net.WriteEntity(self)
-		net.WriteString(self.prop2mesh_synctime or "")
-		net.SendToServer()
+		if not netDisabled() then
+			refreshAll(self, self.prop2mesh_controllers)
+
+			net.Start("prop2mesh_sync")
+			net.WriteEntity(self)
+			net.WriteString(self.prop2mesh_synctime or "")
+			net.SendToServer()
+		end
 
 		self.prop2mesh_refresh = nil
 		self.prop2mesh_sync = true
@@ -392,7 +404,9 @@ function ENT:Think()
 
 	if self.prop2mesh_refresh then
 		SyncOwner(self)
-		refreshAll(self, self.prop2mesh_controllers)
+		if not netDisabled() then
+			refreshAll(self, self.prop2mesh_controllers)
+		end
 		self.prop2mesh_refresh = nil
 	end
 end
@@ -590,6 +604,8 @@ end
 
 ]]
 net.Receive("prop2mesh_update", function(len)
+	if netDisabled() then return end
+
 	local self = net.ReadEntity()
 	if not prop2mesh.isValid(self) then
 		return
@@ -615,6 +631,8 @@ net.Receive("prop2mesh_update", function(len)
 end)
 
 net.Receive("prop2mesh_sync", function(len)
+	if netDisabled() then return end
+
 	local self = net.ReadEntity()
 	if not prop2mesh.isValid(self) then
 		return
@@ -672,6 +690,8 @@ end)
 prop2mesh.downloads = 0
 
 net.Receive("prop2mesh_download", function(len)
+	if netDisabled() then return end
+
 	local crc = net.ReadString()
 	if not crc then
 		return

@@ -36,9 +36,10 @@ end
 --[[
 
 ]]
-if SERVER then
-	CreateConVar("prop2mesh_disable_allowed", 0, {FCVAR_NOTIFY, FCVAR_ARCHIVE}, "prevents prop2mesh data from networking")
 
+CreateConVar("prop2mesh_disable_allowed", 0, {FCVAR_NOTIFY, FCVAR_REPLICATED, FCVAR_ARCHIVE}, "prevents prop2mesh data from networking")
+
+if SERVER then
 	AddCSLuaFile("prop2mesh/cl_meshlab.lua")
 	AddCSLuaFile("prop2mesh/cl_modelfixer.lua")
 	AddCSLuaFile("prop2mesh/cl_editor.lua")

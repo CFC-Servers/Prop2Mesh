@@ -121,8 +121,32 @@ end)
 ]]
 local allow_disable = GetConVar("prop2mesh_disable_allowed")
 
+local function plyWantsMessages(pl)
+	return tobool(pl:GetInfoNum("prop2mesh_disable", 0))
+end
+
+local recipients
+local function filteredBroadcast()
+	if not allow_disable:GetBool() then
+		return net.Broadcast()
+	end
+
+	recipients = {}
+	local plys = player.GetAll()
+	local plyCount = #plys
+
+	for i = 1, plyCount do
+		local pl = rawget(plys, i)
+		if plyWantsMessages(pl) then
+			table.insert(recipients, pl)
+		end
+	end
+
+	net.Send(recipients)
+end
+
 net.Receive("prop2mesh_download", function(len, pl)
-	if allow_disable:GetBool() and tobool(pl:GetInfoNum("prop2mesh_disable", 0)) then return end
+	if allow_disable:GetBool() and plyWantsMessages(pl) then return end
 
 	local self = net.ReadEntity()
 	if not prop2mesh.isValid(self) then
@@ -229,7 +253,7 @@ function ENT:Think()
 			end
 
 			net.WriteTable(self.prop2mesh_updates)
-			net.Broadcast()
+			filteredBroadcast()
 
 			self.prop2mesh_updates = nil
 		else
@@ -336,6 +360,10 @@ function ENT:RemoveController(index)
 end
 
 function ENT:SendControllers(syncwith)
+	if syncwith and (not plyWantsMessages(syncwith)) then
+		return
+	end
+
 	net.Start("prop2mesh_sync")
 
 	net.WriteEntity(self)
@@ -399,7 +427,7 @@ function ENT:SendControllers(syncwith)
 	if syncwith then
 		net.Send(syncwith)
 	else
-		net.Broadcast()
+		filteredBroadcast()
 	end
 end
 
